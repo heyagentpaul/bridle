@@ -15,6 +15,7 @@ from .call import Call, register, resolve
 from .errors import ConfigurationError, LoopExhaustedError, TokenBudgetExceededError
 from .runtime import (
     current_agent_model,
+    current_agent_system,
     current_model_client,
     current_per_call_model,
     current_token_usage,
@@ -43,6 +44,9 @@ def step(
     schema: type[T],
     context: Any = None,
     tools: Sequence[Tool] = (),
+    system: str | None = None,
+    max_turns: int = 50,
+    max_schema_retries: int = 3,
     label: str | None = None,
 ) -> T:
     """Run one unit of judgment.
@@ -52,11 +56,26 @@ def step(
     *schema*. When the model calls ``__bridle_return__`` with valid arguments,
     the step returns the typed value.
 
+    *system* overrides the loop's default system prompt. Resolution order is
+    per-call (this kwarg) > per-agent (``@agent(system=...)``) > the loop's
+    built-in default. *max_turns* caps total model turns before
+    :class:`bridle.errors.ModelError` fires; *max_schema_retries* caps invalid
+    structured-output attempts before :class:`bridle.errors.SchemaSatisfactionError`.
+
     Returns a :class:`bridle.Call` that resolves to a value of type ``T`` on
     first use. The annotation lies to the type checker on purpose — the
     caller always reads the value through normal attribute or boolean access,
     which triggers resolution.
     """
+
+    options: dict[str, Any] = {
+        "max_turns": int(max_turns),
+        "max_schema_retries": int(max_schema_retries),
+    }
+    if system is not None:
+        options["system"] = system
+    if label is not None:
+        options["label"] = label
 
     call = Call(
         kind="step",
@@ -64,7 +83,7 @@ def step(
         schema=schema,
         context=context,
         tools=tuple(tools),
-        options={"label": label} if label is not None else {},
+        options=options,
     )
     return cast("T", call)
 
@@ -85,6 +104,9 @@ def _dispatch_step(call: Call) -> Any:
     per_call_model = call.options.get("model") or current_per_call_model()
     per_agent_model = call.options.get("agent_model") or current_agent_model()
     model = require_model(per_call=per_call_model, per_agent=per_agent_model)
+
+    # System prompt resolution: per-call > per-agent > loop default.
+    system = call.options.get("system") or current_agent_system()
 
     budget = effective_token_budget()
     if budget is not None and current_token_usage() >= budget:
@@ -113,6 +135,7 @@ def _dispatch_step(call: Call) -> Any:
             tools=call.tools,
             client=client,
             model=model,
+            system=system,
             max_turns=int(call.options.get("max_turns", 50)),
             max_schema_retries=int(call.options.get("max_schema_retries", 3)),
             parent_event_id=start_event.id,

@@ -342,3 +342,33 @@ def test_no_model_anywhere_raises_configuration_error() -> None:
             resolve(planner(Query(topic="x")))
 
     _isolated(body)
+
+
+def test_agent_system_prompt_inherited_by_inner_steps() -> None:
+    def body() -> None:
+        @agent(input=Query, output=Plan, model="mock-1", system="You are agent voice.")
+        def planner(q: Query) -> Plan:
+            return step("plan", schema=Plan, context=q)
+
+        client = MockModelClient([tool_response(return_call({"topics": ["a"]}))])
+        set_model_client(client)
+
+        resolve(planner(Query(topic="x")))
+        assert client.calls[0]["system"] == "You are agent voice."
+
+    _isolated(body)
+
+
+def test_per_call_system_prompt_beats_per_agent() -> None:
+    def body() -> None:
+        @agent(input=Query, output=Plan, model="mock-1", system="agent voice")
+        def planner(q: Query) -> Plan:
+            return step("plan", schema=Plan, context=q, system="per-call voice")
+
+        client = MockModelClient([tool_response(return_call({"topics": ["a"]}))])
+        set_model_client(client)
+
+        resolve(planner(Query(topic="x")))
+        assert client.calls[0]["system"] == "per-call voice"
+
+    _isolated(body)

@@ -20,9 +20,11 @@ from .call import Call, register, resolve
 from .errors import ConfigurationError
 from .runtime import (
     push_agent_model,
+    push_agent_system,
     push_agent_token_budget,
     push_token_usage,
     reset_agent_model,
+    reset_agent_system,
     reset_agent_token_budget,
     reset_token_usage,
 )
@@ -47,15 +49,20 @@ def agent(
     output: Any = None,
     model: str | None = None,
     token_budget: int | None = None,
+    system: str | None = None,
     name: str | None = None,
 ) -> Callable[[F], F]:
     """Mark a function as an agent.
 
     Each call to the decorated function returns a :class:`Call` of kind
     ``agent``. When that call is resolved (read, awaited, or passed to
-    :func:`bridle.resolve`), the body runs with the supplied *model* and
-    *token_budget* in scope. Inner primitives pick up these values
-    automatically.
+    :func:`bridle.resolve`), the body runs with the supplied *model*,
+    *token_budget*, and *system* prompt in scope. Inner primitives pick up
+    these values automatically.
+
+    *system* sets the system prompt used by every inner :func:`step` that
+    does not pass its own ``system=``. Per-call overrides win; the loop's
+    built-in default applies when neither is set.
 
     *input* and *output* are optional Pydantic schemas. When set, the first
     positional argument is validated against *input* (coerced from a dict if
@@ -77,6 +84,7 @@ def agent(
                     "output_schema": output,
                     "agent_model": model,
                     "token_budget": token_budget,
+                    "agent_system": system,
                     "name": agent_label,
                 },
             )
@@ -114,6 +122,7 @@ def _dispatch_agent(call: Call) -> Any:
     label: str = options.get("name") or "agent"
     agent_model_value: str | None = options.get("agent_model")
     token_budget: int | None = options.get("token_budget")
+    agent_system_value: str | None = options.get("agent_system")
     input_schema: Any = options.get("input_schema")
     output_schema: Any = options.get("output_schema")
 
@@ -131,6 +140,7 @@ def _dispatch_agent(call: Call) -> Any:
     event_token = push_event_id(start_event.id)
 
     model_token = push_agent_model(agent_model_value) if agent_model_value is not None else None
+    system_token = push_agent_system(agent_system_value) if agent_system_value is not None else None
     budget_token = push_agent_token_budget(token_budget) if token_budget is not None else None
     # When the agent declares a budget, reset usage so the budget applies to
     # this agent's subtree only — nested agents within a budgeted agent share
@@ -162,6 +172,8 @@ def _dispatch_agent(call: Call) -> Any:
             reset_token_usage(usage_token)
         if budget_token is not None:
             reset_agent_token_budget(budget_token)
+        if system_token is not None:
+            reset_agent_system(system_token)
         if model_token is not None:
             reset_agent_model(model_token)
         if trace_token is not None:

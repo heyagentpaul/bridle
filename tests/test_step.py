@@ -376,3 +376,66 @@ def test_call_end_records_error_on_failure() -> None:
         assert "SchemaSatisfactionError" in end.error
 
     _isolated(body)
+
+
+def test_per_call_system_prompt_reaches_model_client() -> None:
+    def body() -> None:
+        client = MockModelClient([tool_response(return_call({"topics": ["a"]}))])
+        set_model_client(client)
+        bridle.configure(model="mock-1")
+
+        resolve(step("plan", schema=Plan, system="You are a stoic planner."))
+
+        assert client.calls[0]["system"] == "You are a stoic planner."
+
+    _isolated(body)
+
+
+def test_default_system_prompt_used_when_unset() -> None:
+    def body() -> None:
+        client = MockModelClient([tool_response(return_call({"topics": ["a"]}))])
+        set_model_client(client)
+        bridle.configure(model="mock-1")
+
+        resolve(step("plan", schema=Plan))
+
+        from bridle._internal.tool_loop import DEFAULT_SYSTEM_PROMPT
+
+        assert client.calls[0]["system"] == DEFAULT_SYSTEM_PROMPT
+
+    _isolated(body)
+
+
+def test_max_turns_kwarg_overrides_default() -> None:
+    def body() -> None:
+        # Always text → forces max_turns to be hit.
+        client = MockModelClient(lambda _msgs, _tools: text_response("hmm"))
+        set_model_client(client)
+        bridle.configure(model="mock-1")
+
+        with pytest.raises(ModelError):
+            resolve(step("plan", schema=Plan, max_turns=2))
+
+        # Two turns made, then loop bailed.
+        assert len(client.calls) == 2
+
+    _isolated(body)
+
+
+def test_max_schema_retries_kwarg_overrides_default() -> None:
+    def body() -> None:
+        client = MockModelClient(
+            [
+                tool_response(return_call({"topics": "bad-1"})),
+                tool_response(return_call({"topics": "bad-2"})),
+            ]
+        )
+        set_model_client(client)
+        bridle.configure(model="mock-1")
+
+        with pytest.raises(SchemaSatisfactionError) as exc_info:
+            resolve(step("plan", schema=Plan, max_schema_retries=2))
+
+        assert exc_info.value.attempts == 2
+
+    _isolated(body)

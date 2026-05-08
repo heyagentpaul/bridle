@@ -24,6 +24,7 @@ _agent_model: ContextVar[str | None] = ContextVar("bridle_agent_model", default=
 _agent_token_budget: ContextVar[int | None] = ContextVar("bridle_agent_token_budget", default=None)
 _token_usage: ContextVar[int] = ContextVar("bridle_token_usage", default=0)
 _per_call_model: ContextVar[str | None] = ContextVar("bridle_per_call_model", default=None)
+_agent_system: ContextVar[str | None] = ContextVar("bridle_agent_system", default=None)
 
 
 def configure(
@@ -143,6 +144,20 @@ def reset_per_call_model(token: Any) -> None:
     _per_call_model.reset(token)
 
 
+def current_agent_system() -> str | None:
+    """System prompt declared by the enclosing ``@agent``, if any."""
+
+    return _agent_system.get()
+
+
+def push_agent_system(system: str | None) -> Any:
+    return _agent_system.set(system)
+
+
+def reset_agent_system(token: Any) -> None:
+    _agent_system.reset(token)
+
+
 def require_model(per_call: str | None = None, per_agent: str | None = None) -> str:
     """Resolve the active model name, in order: per-call, per-agent, process.
 
@@ -164,6 +179,7 @@ __all__ = [
     "bump_token_usage",
     "configure",
     "current_agent_model",
+    "current_agent_system",
     "current_agent_token_budget",
     "current_cache",
     "current_model",
@@ -173,11 +189,13 @@ __all__ = [
     "current_token_usage",
     "effective_token_budget",
     "push_agent_model",
+    "push_agent_system",
     "push_agent_token_budget",
     "push_per_call_model",
     "push_token_usage",
     "require_model",
     "reset_agent_model",
+    "reset_agent_system",
     "reset_agent_token_budget",
     "reset_per_call_model",
     "reset_token_usage",
