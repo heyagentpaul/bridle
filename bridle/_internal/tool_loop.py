@@ -23,8 +23,14 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ..errors import ModelError, SchemaSatisfactionError, ToolExecutionError
+from ..errors import (
+    ModelError,
+    SchemaSatisfactionError,
+    TokenBudgetExceededError,
+    ToolExecutionError,
+)
 from ..models import ModelClient, ModelResponse
+from ..runtime import bump_token_usage, current_token_usage, effective_token_budget
 from ..tool import Tool
 from ..trace import Event, current_trace
 from .json_repair import correction_message, jsonable, short_error
@@ -101,6 +107,15 @@ def run_step(
                 "output_tokens": response.output_tokens,
             },
         )
+
+        bump_token_usage(response.input_tokens + response.output_tokens)
+        budget = effective_token_budget()
+        if budget is not None and current_token_usage() > budget:
+            raise TokenBudgetExceededError(
+                f"Token budget {budget} exhausted mid-step.",
+                used=current_token_usage(),
+                budget=budget,
+            )
 
         messages.append({"role": "assistant", "content": _assistant_content(response)})
 

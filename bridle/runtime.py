@@ -29,6 +29,9 @@ _token_budget: ContextVar[int | None] = ContextVar("bridle_token_budget", defaul
 _cache_backend: ContextVar[Any | None] = ContextVar("bridle_cache_backend", default=None)
 _human_channel: ContextVar[HumanChannel | None] = ContextVar("bridle_human_channel", default=None)
 _model_client: ContextVar[Any | None] = ContextVar("bridle_model_client", default=None)
+_agent_model: ContextVar[str | None] = ContextVar("bridle_agent_model", default=None)
+_agent_token_budget: ContextVar[int | None] = ContextVar("bridle_agent_token_budget", default=None)
+_token_usage: ContextVar[int] = ContextVar("bridle_token_usage", default=0)
 
 
 def configure(
@@ -88,13 +91,69 @@ def current_model_client() -> Any | None:
     return _model_client.get()
 
 
+def current_agent_model() -> str | None:
+    """Model declared by the enclosing ``@agent``, if any."""
+
+    return _agent_model.get()
+
+
+def push_agent_model(model: str | None) -> Any:
+    return _agent_model.set(model)
+
+
+def reset_agent_model(token: Any) -> None:
+    _agent_model.reset(token)
+
+
+def current_agent_token_budget() -> int | None:
+    """Token budget declared by the enclosing ``@agent``, if any."""
+
+    return _agent_token_budget.get()
+
+
+def push_agent_token_budget(budget: int | None) -> Any:
+    return _agent_token_budget.set(budget)
+
+
+def reset_agent_token_budget(token: Any) -> None:
+    _agent_token_budget.reset(token)
+
+
+def current_token_usage() -> int:
+    """Cumulative tokens used in this context."""
+
+    return _token_usage.get()
+
+
+def push_token_usage(value: int) -> Any:
+    return _token_usage.set(value)
+
+
+def reset_token_usage(token: Any) -> None:
+    _token_usage.reset(token)
+
+
+def bump_token_usage(delta: int) -> int:
+    """Add *delta* to the current token usage. Returns the new total."""
+
+    new_total = _token_usage.get() + max(0, delta)
+    _token_usage.set(new_total)
+    return new_total
+
+
+def effective_token_budget() -> int | None:
+    """The active budget — agent-level wins over process-level."""
+
+    return current_agent_token_budget() or current_token_budget()
+
+
 def require_model(per_call: str | None = None, per_agent: str | None = None) -> str:
     """Resolve the active model name, in order: per-call, per-agent, process.
 
     Raises :class:`ConfigurationError` with explicit guidance when nothing is set.
     """
 
-    model = per_call or per_agent or current_model()
+    model = per_call or per_agent or current_agent_model() or current_model()
     if model is None:
         raise ConfigurationError(
             "No model specified. Set one of:\n"
@@ -107,13 +166,24 @@ def require_model(per_call: str | None = None, per_agent: str | None = None) -> 
 
 __all__ = [
     "HumanChannel",
+    "bump_token_usage",
     "configure",
+    "current_agent_model",
+    "current_agent_token_budget",
     "current_cache",
     "current_human_channel",
     "current_model",
     "current_model_client",
     "current_token_budget",
+    "current_token_usage",
+    "effective_token_budget",
+    "push_agent_model",
+    "push_agent_token_budget",
+    "push_token_usage",
     "require_model",
+    "reset_agent_model",
+    "reset_agent_token_budget",
+    "reset_token_usage",
     "set_cache",
     "set_human_channel",
     "set_model_client",

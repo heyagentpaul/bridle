@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .agent import agent
 from .call import Call, CallMeta, evaluate, register, resolve, unregister
 from .errors import (
     BridleError,
@@ -21,10 +22,11 @@ from .runtime import (
     current_human_channel,
     current_model,
     current_token_budget,
+    current_token_usage,
     set_cache,
     set_human_channel,
 )
-from .tool import Tool
+from .tool import Tool, tool
 from .trace import Event, Trace, current_trace
 
 __version__ = "0.1.0"
@@ -45,11 +47,13 @@ __all__ = [
     "ToolExecutionError",
     "Trace",
     "__version__",
+    "agent",
     "configure",
     "current_cache",
     "current_human_channel",
     "current_model",
     "current_token_budget",
+    "current_token_usage",
     "current_trace",
     "evaluate",
     "register",
@@ -57,5 +61,6 @@ __all__ = [
     "set_cache",
     "set_human_channel",
     "step",
+    "tool",
     "unregister",
 ]

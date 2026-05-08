@@ -12,10 +12,25 @@ from collections.abc import Sequence
 from typing import Any, TypeVar, cast
 
 from .call import Call, register
-from .errors import ConfigurationError
-from .runtime import current_model_client, require_model
+from .errors import ConfigurationError, TokenBudgetExceededError
+from .runtime import (
+    current_agent_model,
+    current_model_client,
+    current_token_usage,
+    effective_token_budget,
+    require_model,
+)
 from .tool import Tool
-from .trace import Event, Trace, current_trace, reset_active_trace, set_active_trace
+from .trace import (
+    Event,
+    Trace,
+    current_event_id,
+    current_trace,
+    push_event_id,
+    reset_active_trace,
+    reset_event_id,
+    set_active_trace,
+)
 
 T = TypeVar("T")
 
@@ -66,16 +81,27 @@ def _dispatch_step(call: Call) -> Any:
         )
 
     per_call_model = call.options.get("model")
-    per_agent_model = call.options.get("agent_model")
+    per_agent_model = call.options.get("agent_model") or current_agent_model()
     model = require_model(per_call=per_call_model, per_agent=per_agent_model)
+
+    budget = effective_token_budget()
+    if budget is not None and current_token_usage() >= budget:
+        raise TokenBudgetExceededError(
+            f"Token budget {budget} exhausted before step started.",
+            used=current_token_usage(),
+            budget=budget,
+        )
 
     label = call.options.get("label") or call.prompt or "step"
     parent_trace = current_trace()
     trace = parent_trace if parent_trace is not None else Trace()
-    token = set_active_trace(trace) if parent_trace is None else None
+    trace_token = set_active_trace(trace) if parent_trace is None else None
 
-    start_event = Event.new("call_start", call_kind="step", label=label)
+    parent_id = current_event_id()
+    start_event = Event.new("call_start", parent_id=parent_id, call_kind="step", label=label)
     trace.emit(start_event)
+    event_token = push_event_id(start_event.id)
+
     error: BaseException | None = None
     try:
         return run_step(
@@ -102,8 +128,9 @@ def _dispatch_step(call: Call) -> Any:
                 error=f"{type(error).__name__}: {error}" if error is not None else None,
             )
         )
-        if token is not None:
-            reset_active_trace(token)
+        reset_event_id(event_token)
+        if trace_token is not None:
+            reset_active_trace(trace_token)
 
 
 register("step", _dispatch_step)

@@ -135,6 +135,7 @@ class Trace:
 
 
 _active_trace: ContextVar[Trace | None] = ContextVar("bridle_trace", default=None)
+_current_event_id: ContextVar[str | None] = ContextVar("bridle_current_event_id", default=None)
 
 
 def current_trace() -> Trace | None:
@@ -153,12 +154,37 @@ def reset_active_trace(token: Any) -> None:
     _active_trace.reset(token)
 
 
+def current_event_id() -> str | None:
+    """Return the id of the enclosing call event, if any.
+
+    A primitive's ``call_start`` event uses this as its ``parent_id`` to thread
+    nesting through the trace. Composing agents pushes their ``call_start`` id
+    so any inner ``step``/``branch``/``loop`` lands underneath it in
+    :meth:`Trace.tree`.
+    """
+
+    return _current_event_id.get()
+
+
+def push_event_id(event_id: str) -> Any:
+    """Set the current parent event id. Returns a token for :func:`reset_event_id`."""
+
+    return _current_event_id.set(event_id)
+
+
+def reset_event_id(token: Any) -> None:
+    _current_event_id.reset(token)
+
+
 __all__ = [
     "Event",
     "EventKind",
     "Observer",
     "Trace",
+    "current_event_id",
     "current_trace",
+    "push_event_id",
     "reset_active_trace",
+    "reset_event_id",
     "set_active_trace",
 ]
