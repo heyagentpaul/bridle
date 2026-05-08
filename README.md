@@ -1,4 +1,4 @@
-# Bridle
+# 🐴 Bridle
 
 Harness an agent into a deterministic program with typed I/O.
 
