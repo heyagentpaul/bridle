@@ -46,6 +46,15 @@ class Call:
     mutating in place. Equality is identity-based — two ``Call``\\ s with the
     same fields are not "equal" because semantically each represents a
     distinct unit of work.
+
+    Watch out: a ``Call`` is truthy on resolution, not on existence. Writing
+    ``if some_step:`` will *evaluate* ``some_step`` to decide the branch —
+    which means hitting the model. This is intentional (it's how
+    :func:`bridle.branch` reads naturally as ``if branch(...)``) but it
+    surprises people checking "did I get a call back yet?" Use ``is None`` /
+    ``is not None`` for existence checks; reserve truthiness for when you
+    actually want resolution. The same applies to :meth:`__iter__`,
+    :meth:`__len__`, and attribute access.
     """
 
     kind: str
@@ -64,6 +73,14 @@ class Call:
     # --- Lazy resolution surface --------------------------------------------------
 
     def __bool__(self) -> bool:
+        """Resolve the call and return the truthiness of its result.
+
+        Watch out: this triggers full evaluation. ``if some_step:`` runs the
+        step. That's intentional — it's what makes ``if branch("..."):`` read
+        naturally — but it's a footgun for anyone testing whether a ``Call``
+        exists. Use ``is None`` / ``is not None`` for existence checks.
+        """
+
         return bool(self._resolve())
 
     def __iter__(self) -> Iterator[Any]:

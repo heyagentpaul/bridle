@@ -113,6 +113,11 @@ def cache(
     context, prompt, and tools. Pass a string for a fixed key, or a callable
     for a custom derivation. *backend* defaults to the active backend
     registered via :func:`bridle.set_cache`, or an in-memory cache otherwise.
+
+    Note: the default key includes the inner call's ``kind``, so
+    ``cache(step(...))`` and ``cache(retry(step(...)))`` have distinct cache
+    identities even when their underlying work is the same. To share a cache
+    entry across wrapper compositions, pass an explicit ``key=`` string.
     """
 
     return Call(
