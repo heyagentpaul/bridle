@@ -16,6 +16,7 @@ from .errors import ConfigurationError, LoopExhaustedError, TokenBudgetExceededE
 from .runtime import (
     current_agent_model,
     current_model_client,
+    current_per_call_model,
     current_token_usage,
     effective_token_budget,
     require_model,
@@ -81,7 +82,7 @@ def _dispatch_step(call: Call) -> Any:
             "adapter wires this up automatically when used."
         )
 
-    per_call_model = call.options.get("model")
+    per_call_model = call.options.get("model") or current_per_call_model()
     per_agent_model = call.options.get("agent_model") or current_agent_model()
     model = require_model(per_call=per_call_model, per_agent=per_agent_model)
 

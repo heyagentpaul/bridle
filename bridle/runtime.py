@@ -23,6 +23,7 @@ _model_client: ContextVar[Any | None] = ContextVar("bridle_model_client", defaul
 _agent_model: ContextVar[str | None] = ContextVar("bridle_agent_model", default=None)
 _agent_token_budget: ContextVar[int | None] = ContextVar("bridle_agent_token_budget", default=None)
 _token_usage: ContextVar[int] = ContextVar("bridle_token_usage", default=0)
+_per_call_model: ContextVar[str | None] = ContextVar("bridle_per_call_model", default=None)
 
 
 def configure(
@@ -128,6 +129,20 @@ def effective_token_budget() -> int | None:
     return current_agent_token_budget() or current_token_budget()
 
 
+def current_per_call_model() -> str | None:
+    """Per-call model override pushed by ``with_model``."""
+
+    return _per_call_model.get()
+
+
+def push_per_call_model(model: str) -> Any:
+    return _per_call_model.set(model)
+
+
+def reset_per_call_model(token: Any) -> None:
+    _per_call_model.reset(token)
+
+
 def require_model(per_call: str | None = None, per_agent: str | None = None) -> str:
     """Resolve the active model name, in order: per-call, per-agent, process.
 
@@ -153,15 +168,18 @@ __all__ = [
     "current_cache",
     "current_model",
     "current_model_client",
+    "current_per_call_model",
     "current_token_budget",
     "current_token_usage",
     "effective_token_budget",
     "push_agent_model",
     "push_agent_token_budget",
+    "push_per_call_model",
     "push_token_usage",
     "require_model",
     "reset_agent_model",
     "reset_agent_token_budget",
+    "reset_per_call_model",
     "reset_token_usage",
     "set_cache",
     "set_model_client",

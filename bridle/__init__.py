@@ -25,6 +25,7 @@ from .runtime import (
 )
 from .tool import Tool, tool
 from .trace import Event, Trace, current_trace
+from .wrappers import cache, fallback, log, mock, retry, timeout, with_model
 
 __version__ = "0.1.0"
 
@@ -45,6 +46,7 @@ __all__ = [
     "__version__",
     "agent",
     "branch",
+    "cache",
     "configure",
     "current_cache",
     "current_model",
@@ -52,11 +54,17 @@ __all__ = [
     "current_token_usage",
     "current_trace",
     "evaluate",
+    "fallback",
+    "log",
     "loop",
+    "mock",
     "register",
     "resolve",
+    "retry",
     "set_cache",
     "step",
+    "timeout",
     "tool",
     "unregister",
+    "with_model",
 ]

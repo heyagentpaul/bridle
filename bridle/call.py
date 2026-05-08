@@ -102,6 +102,25 @@ class Call:
             meta=self.meta,
         )
 
+    def clone(self) -> Call:
+        """Return an unevaluated copy of this :class:`Call`.
+
+        Wrappers that re-evaluate the same logical call multiple times
+        (``retry``, ``fallback``, etc.) clone first so each attempt
+        resolves afresh — the original's ``_resolved`` cache is left
+        untouched.
+        """
+
+        return Call(
+            kind=self.kind,
+            prompt=self.prompt,
+            schema=self.schema,
+            context=self.context,
+            tools=self.tools,
+            options={**self.options},
+            meta=self.meta,
+        )
+
 
 # --- Dispatch -------------------------------------------------------------------
 
