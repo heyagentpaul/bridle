@@ -14,7 +14,7 @@ from .errors import (
     TokenBudgetExceededError,
     ToolExecutionError,
 )
-from .primitives import step
+from .primitives import branch, loop, step
 from .runtime import (
     configure,
     current_cache,
@@ -44,6 +44,7 @@ __all__ = [
     "Trace",
     "__version__",
     "agent",
+    "branch",
     "configure",
     "current_cache",
     "current_model",
@@ -51,6 +52,7 @@ __all__ = [
     "current_token_usage",
     "current_trace",
     "evaluate",
+    "loop",
     "register",
     "resolve",
     "set_cache",

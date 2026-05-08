@@ -1,4 +1,4 @@
-"""The five primitives. Each returns a :class:`Call`.
+"""The four primitives. Each returns a :class:`Call`.
 
 This module wires up the dispatch table by registering each primitive's
 evaluator with the :mod:`bridle.call` runtime at import time. Call
@@ -8,11 +8,11 @@ reads the result.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, TypeVar, cast
 
-from .call import Call, register
-from .errors import ConfigurationError, TokenBudgetExceededError
+from .call import Call, register, resolve
+from .errors import ConfigurationError, LoopExhaustedError, TokenBudgetExceededError
 from .runtime import (
     current_agent_model,
     current_model_client,
@@ -33,6 +33,7 @@ from .trace import (
 )
 
 T = TypeVar("T")
+DEFAULT_LOOP_MAX_ITERATIONS = 32
 
 
 def step(
@@ -98,7 +99,7 @@ def _dispatch_step(call: Call) -> Any:
     trace_token = set_active_trace(trace) if parent_trace is None else None
 
     parent_id = current_event_id()
-    start_event = Event.new("call_start", parent_id=parent_id, call_kind="step", label=label)
+    start_event = Event.new("call_start", parent_id=parent_id, call_kind=call.kind, label=label)
     trace.emit(start_event)
     event_token = push_event_id(start_event.id)
 
@@ -122,7 +123,7 @@ def _dispatch_step(call: Call) -> Any:
         trace.emit(
             Event.new(
                 "call_end",
-                call_kind="step",
+                call_kind=call.kind,
                 parent_id=start_event.id,
                 label=label,
                 error=f"{type(error).__name__}: {error}" if error is not None else None,
@@ -136,4 +137,138 @@ def _dispatch_step(call: Call) -> Any:
 register("step", _dispatch_step)
 
 
-__all__ = ["step"]
+def branch(
+    prompt: str,
+    *,
+    schema: type[T] = bool,  # type: ignore[assignment]
+    context: Any = None,
+    label: str | None = None,
+) -> T:
+    """A step constrained to a single typed decision — no tools.
+
+    The default *schema* is :class:`bool`; ``branch`` shines as the conditional
+    in an ``if`` statement::
+
+        if branch("is the evidence sufficient?", context=sources):
+            ...
+
+    For multi-way decisions, pass an enum or a ``Literal`` type as *schema*.
+    """
+
+    call = Call(
+        kind="branch",
+        prompt=prompt,
+        schema=schema,
+        context=context,
+        tools=(),
+        options={"label": label} if label is not None else {},
+    )
+    return cast("T", call)
+
+
+# ``branch`` shares ``step``'s evaluator — same loop, different ``Call.kind``,
+# which propagates through the trace as the ``call_kind`` on its events.
+register("branch", _dispatch_step)
+
+
+def loop(
+    prompt: str,
+    *,
+    schema: type[T],
+    until: Callable[[list[T]], bool],
+    context: Any = None,
+    tools: Sequence[Tool] = (),
+    max_iterations: int = DEFAULT_LOOP_MAX_ITERATIONS,
+    label: str | None = None,
+) -> list[T]:
+    """Repeatedly produce typed values until ``until(acc)`` is satisfied.
+
+    Each iteration runs an inner ``step`` with the original *context* plus the
+    running accumulator. ``until`` is a pure-Python predicate over the
+    accumulator — it does not consult the model. When *max_iterations* is
+    reached without satisfying *until*, ``loop`` raises
+    :class:`bridle.errors.LoopExhaustedError`.
+    """
+
+    call = Call(
+        kind="loop",
+        prompt=prompt,
+        schema=schema,
+        context=context,
+        tools=tuple(tools),
+        options={
+            "until": until,
+            "max_iterations": int(max_iterations),
+            **({"label": label} if label is not None else {}),
+        },
+    )
+    return cast("list[T]", call)
+
+
+def _dispatch_loop(call: Call) -> list[Any]:
+    until: Callable[[list[Any]], bool] | None = call.options.get("until")
+    if until is None or not callable(until):
+        raise ConfigurationError("loop() requires an `until` predicate.")
+    max_iterations = int(call.options.get("max_iterations", DEFAULT_LOOP_MAX_ITERATIONS))
+    if max_iterations <= 0:
+        raise ConfigurationError("loop() max_iterations must be positive.")
+
+    label = call.options.get("label") or call.prompt or "loop"
+
+    parent_trace = current_trace()
+    trace = parent_trace if parent_trace is not None else Trace()
+    trace_token = set_active_trace(trace) if parent_trace is None else None
+
+    parent_id = current_event_id()
+    start_event = Event.new("call_start", parent_id=parent_id, call_kind="loop", label=label)
+    trace.emit(start_event)
+    event_token = push_event_id(start_event.id)
+
+    accumulator: list[Any] = []
+    error: BaseException | None = None
+    try:
+        for iteration in range(max_iterations):
+            iter_context = {
+                "original_context": call.context,
+                "previous_results": list(accumulator),
+                "iteration": iteration,
+            }
+            sub_call = Call(
+                kind="step",
+                prompt=call.prompt or "",
+                schema=call.schema,
+                context=iter_context,
+                tools=call.tools,
+                options={"label": f"{label}[{iteration}]"},
+            )
+            item = resolve(sub_call)
+            accumulator.append(item)
+            if until(accumulator):
+                return accumulator
+        raise LoopExhaustedError(
+            f"loop hit max_iterations={max_iterations} without satisfying the predicate.",
+            iterations=max_iterations,
+            accumulator=list(accumulator),
+        )
+    except BaseException as exc:
+        error = exc
+        raise
+    finally:
+        trace.emit(
+            Event.new(
+                "call_end",
+                call_kind="loop",
+                parent_id=start_event.id,
+                label=label,
+                error=f"{type(error).__name__}: {error}" if error is not None else None,
+            )
+        )
+        reset_event_id(event_token)
+        if trace_token is not None:
+            reset_active_trace(trace_token)
+
+
+register("loop", _dispatch_loop)
+
+
+__all__ = ["branch", "loop", "step"]
