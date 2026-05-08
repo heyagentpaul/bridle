@@ -1,4 +1,4 @@
-"""The four primitives. Each returns a :class:`Call`.
+"""The three primitives. Each returns a :class:`Call`.
 
 This module wires up the dispatch table by registering each primitive's
 evaluator with the :mod:`bridle.call` runtime at import time. Call

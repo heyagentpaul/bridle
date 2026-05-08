@@ -1,6 +1,6 @@
 """The lazy ``Call`` value and its evaluator.
 
-Primitives (``step``, ``branch``, ``loop``, ``parallel``) and
+Primitives (``step``, ``branch``, ``loop``) and
 the wrapper algebra (``cache``, ``retry``, ``timeout``, ...) all return a
 :class:`Call`. A ``Call`` describes work to be done, not the result of doing
 it. It evaluates lazily on first use — when its truthiness, iterability, or
