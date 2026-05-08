@@ -14,6 +14,7 @@ from .errors import (
     TokenBudgetExceededError,
     ToolExecutionError,
 )
+from .primitives import step
 from .runtime import (
     configure,
     current_cache,
@@ -23,6 +24,7 @@ from .runtime import (
     set_cache,
     set_human_channel,
 )
+from .tool import Tool
 from .trace import Event, Trace, current_trace
 
 __version__ = "0.1.0"
@@ -39,6 +41,7 @@ __all__ = [
     "SchemaSatisfactionError",
     "TimeoutError",
     "TokenBudgetExceededError",
+    "Tool",
     "ToolExecutionError",
     "Trace",
     "__version__",
@@ -53,5 +56,6 @@ __all__ = [
     "resolve",
     "set_cache",
     "set_human_channel",
+    "step",
     "unregister",
 ]
