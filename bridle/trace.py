@@ -27,8 +27,6 @@ EventKind = Literal[
     "cache_hit",
     "cache_miss",
     "retry",
-    "human_prompt",
-    "human_response",
 ]
 
 

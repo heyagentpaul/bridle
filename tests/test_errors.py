@@ -7,7 +7,6 @@ import pytest
 from bridle.errors import (
     BridleError,
     ConfigurationError,
-    HumanAbortedError,
     LoopExhaustedError,
     ModelError,
     SchemaSatisfactionError,
@@ -21,7 +20,6 @@ from bridle.errors import (
     "cls",
     [
         ConfigurationError,
-        HumanAbortedError,
         LoopExhaustedError,
         ModelError,
         SchemaSatisfactionError,

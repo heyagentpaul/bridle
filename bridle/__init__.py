@@ -7,7 +7,6 @@ from .call import Call, CallMeta, evaluate, register, resolve, unregister
 from .errors import (
     BridleError,
     ConfigurationError,
-    HumanAbortedError,
     LoopExhaustedError,
     ModelError,
     SchemaSatisfactionError,
@@ -19,12 +18,10 @@ from .primitives import step
 from .runtime import (
     configure,
     current_cache,
-    current_human_channel,
     current_model,
     current_token_budget,
     current_token_usage,
     set_cache,
-    set_human_channel,
 )
 from .tool import Tool, tool
 from .trace import Event, Trace, current_trace
@@ -37,7 +34,6 @@ __all__ = [
     "CallMeta",
     "ConfigurationError",
     "Event",
-    "HumanAbortedError",
     "LoopExhaustedError",
     "ModelError",
     "SchemaSatisfactionError",
@@ -50,7 +46,6 @@ __all__ = [
     "agent",
     "configure",
     "current_cache",
-    "current_human_channel",
     "current_model",
     "current_token_budget",
     "current_token_usage",
@@ -59,7 +54,6 @@ __all__ = [
     "register",
     "resolve",
     "set_cache",
-    "set_human_channel",
     "step",
     "tool",
     "unregister",

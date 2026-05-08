@@ -10,12 +10,10 @@ from bridle.errors import ConfigurationError
 from bridle.runtime import (
     configure,
     current_cache,
-    current_human_channel,
     current_model,
     current_token_budget,
     require_model,
     set_cache,
-    set_human_channel,
 )
 
 
@@ -43,15 +41,12 @@ def test_configure_is_independent_arguments() -> None:
     assert _isolated(body) == "claude-sonnet-4-6"
 
 
-def test_set_cache_and_human_channel() -> None:
-    def body() -> tuple[object, object]:
+def test_set_cache_round_trips() -> None:
+    def body() -> object:
         set_cache("memory-backend")
-        set_human_channel(lambda prompt: "yes")
-        return current_cache(), current_human_channel()
+        return current_cache()
 
-    cache, channel = _isolated(body)
-    assert cache == "memory-backend"
-    assert callable(channel) and channel("ping") == "yes"  # type: ignore[misc]
+    assert _isolated(body) == "memory-backend"
 
 
 def test_require_model_raises_when_unset() -> None:

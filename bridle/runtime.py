@@ -11,23 +11,14 @@ process can carry their own settings without colliding.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from .errors import ConfigurationError
-
-if TYPE_CHECKING:
-    pass
-
-
-HumanChannel = Callable[[str], str]
-
 
 _model: ContextVar[str | None] = ContextVar("bridle_model", default=None)
 _token_budget: ContextVar[int | None] = ContextVar("bridle_token_budget", default=None)
 _cache_backend: ContextVar[Any | None] = ContextVar("bridle_cache_backend", default=None)
-_human_channel: ContextVar[HumanChannel | None] = ContextVar("bridle_human_channel", default=None)
 _model_client: ContextVar[Any | None] = ContextVar("bridle_model_client", default=None)
 _agent_model: ContextVar[str | None] = ContextVar("bridle_agent_model", default=None)
 _agent_token_budget: ContextVar[int | None] = ContextVar("bridle_agent_token_budget", default=None)
@@ -53,12 +44,6 @@ def configure(
         _model_client.set(model_client)
 
 
-def set_human_channel(fn: HumanChannel) -> None:
-    """Register a function that prompts a human and returns their response."""
-
-    _human_channel.set(fn)
-
-
 def set_cache(backend: Any) -> None:
     """Register the active cache backend."""
 
@@ -81,10 +66,6 @@ def current_token_budget() -> int | None:
 
 def current_cache() -> Any | None:
     return _cache_backend.get()
-
-
-def current_human_channel() -> HumanChannel | None:
-    return _human_channel.get()
 
 
 def current_model_client() -> Any | None:
@@ -165,13 +146,11 @@ def require_model(per_call: str | None = None, per_agent: str | None = None) -> 
 
 
 __all__ = [
-    "HumanChannel",
     "bump_token_usage",
     "configure",
     "current_agent_model",
     "current_agent_token_budget",
     "current_cache",
-    "current_human_channel",
     "current_model",
     "current_model_client",
     "current_token_budget",
@@ -185,6 +164,5 @@ __all__ = [
     "reset_agent_token_budget",
     "reset_token_usage",
     "set_cache",
-    "set_human_channel",
     "set_model_client",
 ]

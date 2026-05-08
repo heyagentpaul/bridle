@@ -50,10 +50,6 @@ class ModelError(BridleError):
     """The provider failed after retries are exhausted."""
 
 
-class HumanAbortedError(BridleError):
-    """The human cancelled an :func:`ask_human` prompt."""
-
-
 class LoopExhaustedError(BridleError):
     """A :func:`loop` hit its iteration cap before its predicate returned True."""
 
@@ -83,7 +79,6 @@ class TokenBudgetExceededError(BridleError):
 __all__ = [
     "BridleError",
     "ConfigurationError",
-    "HumanAbortedError",
     "LoopExhaustedError",
     "ModelError",
     "SchemaSatisfactionError",
