@@ -2,9 +2,56 @@
 
 from __future__ import annotations
 
+from .call import Call, CallMeta, evaluate, register, resolve, unregister
+from .errors import (
+    BridleError,
+    ConfigurationError,
+    HumanAbortedError,
+    LoopExhaustedError,
+    ModelError,
+    SchemaSatisfactionError,
+    TimeoutError,
+    TokenBudgetExceededError,
+    ToolExecutionError,
+)
+from .runtime import (
+    configure,
+    current_cache,
+    current_human_channel,
+    current_model,
+    current_token_budget,
+    set_cache,
+    set_human_channel,
+)
+from .trace import Event, Trace, current_trace
+
 __version__ = "0.1.0"
 
-# Public surface is wired up incrementally as modules land.
 __all__ = [
+    "BridleError",
+    "Call",
+    "CallMeta",
+    "ConfigurationError",
+    "Event",
+    "HumanAbortedError",
+    "LoopExhaustedError",
+    "ModelError",
+    "SchemaSatisfactionError",
+    "TimeoutError",
+    "TokenBudgetExceededError",
+    "ToolExecutionError",
+    "Trace",
     "__version__",
+    "configure",
+    "current_cache",
+    "current_human_channel",
+    "current_model",
+    "current_token_budget",
+    "current_trace",
+    "evaluate",
+    "register",
+    "resolve",
+    "set_cache",
+    "set_human_channel",
+    "unregister",
 ]
