@@ -1,6 +1,6 @@
 [project]
 name = "bridle-ai"
-version = "0.1.0"
+version = "0.1.1"
 description = "Harness an agent into a deterministic program with typed I/O."
 readme = "README.md"
 license = { text = "MIT" }

@@ -27,7 +27,7 @@ from .tool import Tool, tool
 from .trace import Event, Trace, current_trace
 from .wrappers import cache, fallback, log, mock, retry, timeout, with_model
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "BridleError",
